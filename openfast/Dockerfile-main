@@ -1,0 +1,33 @@
+# Build image: docker build . -t openfast-dev
+# Start container (SYS_PTRACE required for debuging to work):
+# docker run -dit --cap-add=SYS_PTRACE --mount \
+#	type=bind,source=~/projects,target=/projects \
+#	--name=dev openfast-dev
+
+FROM ubuntu:latest
+
+ENV DEBIAN_FRONTEND=noninteractive TZ=America/Denver
+ENV PIP_ROOT_USER_ACTION=ignore
+
+ARG OPENFAST_MAIN=${OPENFAST_MAIN:-"main"}
+ENV OPENFAST_MAIN=${OPENFAST_MAIN}
+
+# Development tools/libraries
+RUN apt update -qq && \
+    apt install -y git wget \
+    build-essential gcc g++ gfortran cmake ninja-build \
+    libopenblas-serial-dev libopenmpi-dev \
+    libxml2-dev libhdf5-dev libyaml-cpp-dev
+
+
+# Clone and build OpenFAST
+WORKDIR ~
+
+RUN git clone --depth 1 --single-branch --branch ${OPENFAST_MAIN} https://github.com/OpenFAST/openfast 
+
+WORKDIR openfast/build  
+   
+RUN cmake .. -DCMAKE_BUILD_TYPE=Debug
+    
+RUN make openfast
+WORKDIR ~
